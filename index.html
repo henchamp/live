@@ -2870,58 +2870,31 @@
             set: (key, value) => {
                 try {
                     sessionStorage.setItem(key, JSON.stringify(value));
-                } catch (e) {
-                    console.error('Session storage error:', e);
-                }
+                } catch (e) { console.error('Session storage error:', e); }
             },
             get: (key) => {
                 try {
                     const value = sessionStorage.getItem(key);
                     return value ? JSON.parse(value) : null;
-                } catch (e) {
-                    console.error('Session storage error:', e);
-                    return null;
-                }
-            },
-            remove: (key) => {
-                try {
-                    sessionStorage.removeItem(key);
-                } catch (e) {
-                    console.error('Session storage error:', e);
-                }
+                } catch (e) { return null; }
             },
             clear: () => {
-                try {
-                    sessionStorage.clear();
-                } catch (e) {
-                    console.error('Session storage error:', e);
-                }
+                try { sessionStorage.clear(); } catch (e) {}
             }
         };
 
         const LocalStore = {
             set: (key, value) => {
-                try {
-                    localStorage.setItem(key, JSON.stringify(value));
-                } catch (e) {
-                    console.error('Local storage error:', e);
-                }
+                try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
             },
             get: (key) => {
                 try {
                     const value = localStorage.getItem(key);
                     return value ? JSON.parse(value) : null;
-                } catch (e) {
-                    console.error('Local storage error:', e);
-                    return null;
-                }
+                } catch (e) { return null; }
             },
             remove: (key) => {
-                try {
-                    localStorage.removeItem(key);
-                } catch (e) {
-                    console.error('Local storage error:', e);
-                }
+                try { localStorage.removeItem(key); } catch (e) {}
             }
         };
 
@@ -2932,21 +2905,12 @@
                     const response = await fetch(API_URL, {
                         method: 'POST',
                         mode: 'cors',
-                        headers: {
-                            'Content-Type': 'text/plain',
-                        },
-                        body: JSON.stringify({
-                            action: action,
-                            ...data
-                        })
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ action: action, ...data })
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const result = await response.json();
-                    return result;
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
                 } catch (error) {
                     console.error('API Error:', error);
                     throw error;
@@ -2961,31 +2925,13 @@
                 return await this.request('changePassword', { username, currentPassword, newPassword });
             },
 
-            async validateSession(sessionToken, username) {
-                return await this.request('validateSession', { sessionToken, username });
-            },
-
             async checkConnection() {
                 try {
-                    const response = await fetch(API_URL, {
-                        method: 'GET',
-                        mode: 'cors'
-                    });
+                    const response = await fetch(API_URL, { method: 'GET', mode: 'cors' });
                     return response.ok;
-                } catch (error) {
-                    return false;
-                }
+                } catch (error) { return false; }
             }
         };
-
-        // ==================== SHA-256 HASH FUNCTION ====================
-        async function sha256(message) {
-            const msgBuffer = new TextEncoder().encode(message);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            return hashHex;
-        }
 
         // ==================== DOM ELEMENTS ====================
         const loadingScreen = document.getElementById('loadingScreen');
@@ -3005,7 +2951,6 @@
         const toastContainer = document.getElementById('toastContainer');
         const connectionStatus = document.getElementById('connectionStatus');
         const displayUsername = document.getElementById('displayUsername');
-        const profileDisplayName = document.getElementById('profileDisplayName');
         
         // Settings Modal Elements
         const settingsBtn = document.getElementById('settingsBtn');
@@ -3056,32 +3001,23 @@
 
                 if (savedUser && savedUser.sessionToken) {
                     currentUser = savedUser;
-                    showDashboard(false); // Don't show welcome toast on refresh
+                    showDashboard(false);
                 } else if (rememberUser) {
                     usernameInput.value = rememberUser;
                     document.getElementById('rememberMe').checked = true;
                 }
             }, 1500);
 
-            // Set current date
             updateDate();
         });
 
         // ==================== CONNECTION STATUS ====================
         function updateConnectionStatus(status) {
             connectionStatus.className = 'connection-status show ' + status;
-            
             switch(status) {
-                case 'online':
-                    connectionStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>Connected</span>';
-                    setTimeout(() => connectionStatus.classList.remove('show'), 3000);
-                    break;
-                case 'offline':
-                    connectionStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i><span>Offline</span>';
-                    break;
-                case 'connecting':
-                    connectionStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Connecting...</span>';
-                    break;
+                case 'online': connectionStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>Connected</span>'; setTimeout(() => connectionStatus.classList.remove('show'), 3000); break;
+                case 'offline': connectionStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i><span>Offline</span>'; break;
+                case 'connecting': connectionStatus.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Connecting...</span>'; break;
             }
         }
 
@@ -3089,19 +3025,21 @@
         function updateDate() {
             const dateElement = document.getElementById('currentDate');
             const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-            const today = new Date().toLocaleDateString('en-US', options);
-            if (dateElement) {
-                dateElement.textContent = today;
-            }
+            if (dateElement) dateElement.textContent = new Date().toLocaleDateString('en-US', options);
         }
 
-        // ==================== PASSWORD TOGGLE ====================
+        // ==================== PASSWORD TOGGLE (Fixed) ====================
+        // Using event delegation or single listener to prevent duplication
         passwordToggle.addEventListener('click', () => {
-            const type = passwordInput.type === 'password' ? 'text' : 'password';
-            passwordInput.type = type;
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
             passwordToggle.classList.toggle('fa-eye');
             passwordToggle.classList.toggle('fa-eye-slash');
         });
+
+        // Hide error on input
+        usernameInput.addEventListener('input', hideError);
+        passwordInput.addEventListener('input', hideError);
 
         // ==================== LOGIN FORM ====================
         loginForm.addEventListener('submit', async (e) => {
@@ -3113,44 +3051,45 @@
 
             if (!username || !password) {
                 showError('Please enter both username and password');
+                shakeInputs();
                 return;
             }
 
-            // Show loading state
             setLoginLoading(true);
             hideError();
 
             try {
-                // Hash the password before sending
-                const hashedPassword = await sha256(password);
-                
-                // Call API
-                const result = await API.login(username, password);
+                // Using the correct API object
+                const response = await API.login(username, password);
 
-                if (result.success) {
-                    // Save session
-                    currentUser = {
-                        userId: result.user.userId,
-                        username: result.user.username,
-                        sessionToken: result.sessionToken
-                    };
+                if (response.success) {
+                    // Store session
+                    sessionStorage.setItem('sessionToken', response.sessionToken);
+                    sessionStorage.setItem('username', response.user.username);
+                    sessionStorage.setItem('userId', response.user.userId);
                     
-                    Session.set('currentUser', currentUser);
-
                     if (rememberMe) {
-                        LocalStore.set('rememberUser', username);
+                        LocalStore.set('rememberUser', response.user.username);
                     } else {
                         LocalStore.remove('rememberUser');
                     }
 
+                    currentUser = {
+                        userId: response.user.userId,
+                        username: response.user.username,
+                        sessionToken: response.sessionToken
+                    };
+                    
+                    Session.set('currentUser', currentUser);
                     showDashboard(true);
                 } else {
-                    showError(result.message || 'Invalid username or password');
+                    showError(response.message || 'Invalid username or password');
                     shakeInputs();
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                showError('Unable to connect to server. Please check your internet connection.');
+                showError('Connection error. Please check your internet and try again.');
+                shakeInputs();
             } finally {
                 setLoginLoading(false);
             }
@@ -3182,147 +3121,50 @@
         function shakeInputs() {
             usernameInput.style.animation = 'shake 0.5s ease';
             passwordInput.style.animation = 'shake 0.5s ease';
-            
             setTimeout(() => {
                 usernameInput.style.animation = '';
                 passwordInput.style.animation = '';
             }, 500);
         }
 
-                // ============ LOGIN FORM SUBMISSION ============
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value;
-            const rememberMe = document.getElementById('rememberMe').checked;
-
-            // Validate inputs
-            if (!username || !password) {
-                showError('Please enter both username and password');
-                shakeInputs();
-                return;
-            }
-
-            // Show loading state
-            setLoginLoading(true);
-            hideError();
-
-            try {
-                // Call API
-                const response = await apiCall('login', {
-                    username: username,
-                    password: password
-                });
-
-                if (response.success) {
-                    // Store session
-                    sessionStorage.setItem('sessionToken', response.sessionToken);
-                    sessionStorage.setItem('username', response.user.username);
-                    sessionStorage.setItem('userId', response.user.userId);
-                    
-                    if (rememberMe) {
-                        localStorage.setItem('rememberedUser', 'true');
-                        localStorage.setItem('rememberedUsername', response.user.username);
-                    }
-
-                    // Update current user info
-                    currentUser = {
-                        userId: response.user.userId,
-                        username: response.user.username,
-                        sessionToken: response.sessionToken
-                    };
-
-                    // Show dashboard
-                    showDashboard();
-                } else {
-                    showError(response.message || 'Invalid username or password');
-                    shakeInputs();
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                showError('Connection error. Please check your internet and try again.');
-                shakeInputs();
-            } finally {
-                setLoginLoading(false);
-            }
-        });
-
-        // ============ PASSWORD TOGGLE (LOGIN) ============
-        passwordToggle.addEventListener('click', () => {
-            const type = passwordInput.type === 'password' ? 'text' : 'password';
-            passwordInput.type = type;
-            passwordToggle.classList.toggle('fa-eye');
-            passwordToggle.classList.toggle('fa-eye-slash');
-        });
-
-        // Hide error on input
-        usernameInput.addEventListener('input', hideError);
-        passwordInput.addEventListener('input', hideError);
-
-        // ============ SHOW DASHBOARD ============
-        function showDashboard() {
+        // ==================== DASHBOARD LOGIC ====================
+        function showDashboard(showWelcome) {
             loginPage.style.display = 'none';
             dashboardPage.classList.add('active');
-            
-            // Update user display
             updateUserDisplay();
             
-            // Show welcome toast
-            setTimeout(() => {
-                showToast('welcome', `Welcome Back, ${currentUser.username}!`, 'You have successfully logged in. Have a productive day!');
-            }, 500);
-        }
-
-        // ============ UPDATE USER DISPLAY ============
-        function updateUserDisplay() {
-            const userNameElements = document.querySelectorAll('.sidebar-user-name');
-            userNameElements.forEach(el => {
-                el.textContent = currentUser.username || 'Admin User';
-            });
-
-            // Update profile modal
-            const profileUserName = document.querySelector('#profileMainView .settings-item-title');
-            if (profileUserName) {
-                profileUserName.textContent = currentUser.username || 'Admin User';
+            if (showWelcome) {
+                setTimeout(() => {
+                    showToast('welcome', `Welcome Back, ${currentUser.username}!`, 'You have successfully logged in. Have a productive day!');
+                }, 500);
             }
         }
 
-        // ============ SHOW LOGIN ============
         function showLogin() {
             loginPage.style.display = 'flex';
             dashboardPage.classList.remove('active');
-            
-            // Clear session
-            sessionStorage.clear();
-            localStorage.removeItem('rememberedUser');
-            localStorage.removeItem('rememberedUsername');
-            
-            // Clear form
+            Session.clear();
+            LocalStore.remove('rememberUser');
             usernameInput.value = '';
             passwordInput.value = '';
             hideError();
-            
-            // Reset current user
-            currentUser = {
-                userId: null,
-                username: null,
-                sessionToken: null
-            };
+            currentUser = null;
         }
 
-        // ============ LOGOUT ============
+        function updateUserDisplay() {
+            const userNameElements = document.querySelectorAll('.sidebar-user-name');
+            userNameElements.forEach(el => el.textContent = currentUser.username || 'Admin User');
+            
+            const profileUserName = document.querySelector('#profileMainView .settings-item-title');
+            if (profileUserName) profileUserName.textContent = currentUser.username || 'Admin User';
+        }
+
         logoutBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            
             showToast('success', 'Logged Out', 'You have been successfully logged out.');
-            
-            setTimeout(() => {
-                showLogin();
-            }, 1000);
+            setTimeout(() => showLogin(), 1000);
         });
 
-        // ============ MOBILE MENU TOGGLE ============
         menuToggle.addEventListener('click', () => {
             sidebar.classList.toggle('active');
             overlay.classList.toggle('active');
@@ -3333,42 +3175,34 @@
             overlay.classList.remove('active');
         });
 
-        // ============ SETTINGS MODAL ============
+        // ==================== SETTINGS MODAL ====================
         settingsBtn.addEventListener('click', () => {
             settingsModal.classList.add('active');
-            // Reset to main view
             settingsMainView.style.display = 'block';
             passwordFormView.classList.remove('active');
             clearPasswordForm('settings');
         });
 
-        closeSettingsModal.addEventListener('click', () => {
-            settingsModal.classList.remove('active');
-        });
-
+        closeSettingsModal.addEventListener('click', () => settingsModal.classList.remove('active'));
+        
         settingsModal.addEventListener('click', (e) => {
-            if (e.target === settingsModal) {
-                settingsModal.classList.remove('active');
-            }
+            if (e.target === settingsModal) settingsModal.classList.remove('active');
         });
 
-        // ============ THEME TOGGLE ============
         themeToggle.addEventListener('click', () => {
             isDarkMode = !isDarkMode;
             themeToggle.classList.toggle('active');
-            
             if (isDarkMode) {
                 document.documentElement.setAttribute('data-theme', 'dark');
-                localStorage.setItem('darkMode', 'true');
+                LocalStore.set('darkMode', true);
                 showToast('success', 'Dark Mode Enabled', 'The interface has switched to dark theme.');
             } else {
                 document.documentElement.removeAttribute('data-theme');
-                localStorage.setItem('darkMode', 'false');
+                LocalStore.set('darkMode', false);
                 showToast('success', 'Light Mode Enabled', 'The interface has switched to light theme.');
             }
         });
 
-        // ============ SETTINGS PASSWORD CHANGE ============
         changePasswordBtn.addEventListener('click', () => {
             settingsMainView.style.display = 'none';
             passwordFormView.classList.add('active');
@@ -3380,7 +3214,6 @@
             clearPasswordForm('settings');
         });
 
-        // Settings Password Form Submission
         passwordChangeForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -3388,39 +3221,30 @@
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             
-            // Validate
             if (!currentPassword || !newPassword || !confirmPassword) {
                 showToast('error', 'Missing Fields', 'Please fill in all password fields.');
                 return;
             }
-            
             if (newPassword.length < 6) {
                 showToast('error', 'Password Too Short', 'New password must be at least 6 characters long.');
                 return;
             }
-            
             if (newPassword !== confirmPassword) {
                 showToast('error', 'Passwords Don\'t Match', 'New password and confirm password must match.');
                 return;
             }
 
-            // Show loading
-            const submitBtn = document.getElementById('updatePasswordBtn');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<div class="btn-loader" style="display:block;margin:0 auto;"></div>';
-            submitBtn.disabled = true;
+            const btn = document.getElementById('updatePasswordBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="btn-loader" style="display:block;margin:0 auto;"></div>';
+            btn.disabled = true;
 
             try {
-                const response = await apiCall('changePassword', {
-                    username: currentUser.username,
-                    currentPassword: currentPassword,
-                    newPassword: newPassword
-                });
+                // Using the correct API object
+                const response = await API.changePassword(currentUser.username, currentPassword, newPassword);
 
                 if (response.success) {
                     showToast('success', 'Password Updated', 'Your password has been successfully changed.');
-                    
-                    // Go back to settings main view
                     settingsMainView.style.display = 'block';
                     passwordFormView.classList.remove('active');
                     clearPasswordForm('settings');
@@ -3431,12 +3255,85 @@
                 console.error('Password change error:', error);
                 showToast('error', 'Connection Error', 'Could not connect to server. Please try again.');
             } finally {
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         });
 
-        // Settings password requirements validation
+        // ==================== PROFILE MODAL ====================
+        sidebarUser.addEventListener('click', (e) => {
+            if (e.target.closest('.sidebar-logout')) return;
+            profileModal.classList.add('active');
+            profileMainView.style.display = 'block';
+            profilePasswordFormView.classList.remove('active');
+            clearPasswordForm('profile');
+        });
+
+        closeProfileModal.addEventListener('click', () => profileModal.classList.remove('active'));
+        
+        profileModal.addEventListener('click', (e) => {
+            if (e.target === profileModal) profileModal.classList.remove('active');
+        });
+
+        profileChangePasswordBtn.addEventListener('click', () => {
+            profileMainView.style.display = 'none';
+            profilePasswordFormView.classList.add('active');
+        });
+
+        backToProfile.addEventListener('click', () => {
+            profileMainView.style.display = 'block';
+            profilePasswordFormView.classList.remove('active');
+            clearPasswordForm('profile');
+        });
+
+        profilePasswordChangeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('profileCurrentPassword').value;
+            const newPassword = document.getElementById('profileNewPassword').value;
+            const confirmPassword = document.getElementById('profileConfirmPassword').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showToast('error', 'Missing Fields', 'Please fill in all password fields.');
+                return;
+            }
+            if (newPassword.length < 6) {
+                showToast('error', 'Password Too Short', 'New password must be at least 6 characters long.');
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                showToast('error', 'Passwords Don\'t Match', 'New password and confirm password must match.');
+                return;
+            }
+
+            const btn = document.getElementById('profileUpdatePasswordBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="btn-loader" style="display:block;margin:0 auto;"></div>';
+            btn.disabled = true;
+
+            try {
+                // Using the correct API object
+                const response = await API.changePassword(currentUser.username, currentPassword, newPassword);
+
+                if (response.success) {
+                    showToast('success', 'Password Updated', 'Your password has been successfully changed.');
+                    profileModal.classList.remove('active');
+                    clearPasswordForm('profile');
+                } else {
+                    showToast('error', 'Password Change Failed', response.message || 'Could not update password.');
+                }
+            } catch (error) {
+                console.error('Password change error:', error);
+                showToast('error', 'Connection Error', 'Could not connect to server. Please try again.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+
+        // ==================== HELPERS ====================
+        
+        // Password Requirements Check
         document.getElementById('newPassword').addEventListener('input', function() {
             const reqLength = document.getElementById('req-length');
             if (this.value.length >= 6) {
@@ -3449,98 +3346,8 @@
             checkPasswordMatch('settings');
         });
 
-        document.getElementById('confirmPassword').addEventListener('input', function() {
-            checkPasswordMatch('settings');
-        });
+        document.getElementById('confirmPassword').addEventListener('input', () => checkPasswordMatch('settings'));
 
-        // ============ PROFILE MODAL ============
-        sidebarUser.addEventListener('click', (e) => {
-            if (e.target.closest('.sidebar-logout')) return;
-            profileModal.classList.add('active');
-            // Reset to main view
-            profileMainView.style.display = 'block';
-            profilePasswordFormView.classList.remove('active');
-            clearPasswordForm('profile');
-        });
-
-        closeProfileModal.addEventListener('click', () => {
-            profileModal.classList.remove('active');
-        });
-
-        profileModal.addEventListener('click', (e) => {
-            if (e.target === profileModal) {
-                profileModal.classList.remove('active');
-            }
-        });
-
-        // ============ PROFILE PASSWORD CHANGE ============
-        profileChangePasswordBtn.addEventListener('click', () => {
-            profileMainView.style.display = 'none';
-            profilePasswordFormView.classList.add('active');
-        });
-
-        backToProfile.addEventListener('click', () => {
-            profileMainView.style.display = 'block';
-            profilePasswordFormView.classList.remove('active');
-            clearPasswordForm('profile');
-        });
-
-        // Profile Password Form Submission
-        profilePasswordChangeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const currentPassword = document.getElementById('profileCurrentPassword').value;
-            const newPassword = document.getElementById('profileNewPassword').value;
-            const confirmPassword = document.getElementById('profileConfirmPassword').value;
-            
-            // Validate
-            if (!currentPassword || !newPassword || !confirmPassword) {
-                showToast('error', 'Missing Fields', 'Please fill in all password fields.');
-                return;
-            }
-            
-            if (newPassword.length < 6) {
-                showToast('error', 'Password Too Short', 'New password must be at least 6 characters long.');
-                return;
-            }
-            
-            if (newPassword !== confirmPassword) {
-                showToast('error', 'Passwords Don\'t Match', 'New password and confirm password must match.');
-                return;
-            }
-
-            // Show loading
-            const submitBtn = document.getElementById('profileUpdatePasswordBtn');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<div class="btn-loader" style="display:block;margin:0 auto;"></div>';
-            submitBtn.disabled = true;
-
-            try {
-                const response = await apiCall('changePassword', {
-                    username: currentUser.username,
-                    currentPassword: currentPassword,
-                    newPassword: newPassword
-                });
-
-                if (response.success) {
-                    showToast('success', 'Password Updated', 'Your password has been successfully changed.');
-                    
-                    // Close modal
-                    profileModal.classList.remove('active');
-                    clearPasswordForm('profile');
-                } else {
-                    showToast('error', 'Password Change Failed', response.message || 'Could not update password.');
-                }
-            } catch (error) {
-                console.error('Password change error:', error);
-                showToast('error', 'Connection Error', 'Could not connect to server. Please try again.');
-            } finally {
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }
-        });
-
-        // Profile password requirements validation
         document.getElementById('profileNewPassword').addEventListener('input', function() {
             const reqLength = document.getElementById('profile-req-length');
             if (this.value.length >= 6) {
@@ -3553,31 +3360,19 @@
             checkPasswordMatch('profile');
         });
 
-        document.getElementById('profileConfirmPassword').addEventListener('input', function() {
-            checkPasswordMatch('profile');
-        });
+        document.getElementById('profileConfirmPassword').addEventListener('input', () => checkPasswordMatch('profile'));
 
-        // ============ HELPER FUNCTIONS ============
-        
-        // Check password match
         function checkPasswordMatch(type) {
-            let newPassId, confirmPassId, reqMatchId;
+            const isSettings = type === 'settings';
+            const newPassId = isSettings ? 'newPassword' : 'profileNewPassword';
+            const confirmPassId = isSettings ? 'confirmPassword' : 'profileConfirmPassword';
+            const reqMatchId = isSettings ? 'req-match' : 'profile-req-match';
             
-            if (type === 'settings') {
-                newPassId = 'newPassword';
-                confirmPassId = 'confirmPassword';
-                reqMatchId = 'req-match';
-            } else {
-                newPassId = 'profileNewPassword';
-                confirmPassId = 'profileConfirmPassword';
-                reqMatchId = 'profile-req-match';
-            }
-            
-            const newPassword = document.getElementById(newPassId).value;
-            const confirmPassword = document.getElementById(confirmPassId).value;
+            const newPass = document.getElementById(newPassId).value;
+            const confirmPass = document.getElementById(confirmPassId).value;
             const reqMatch = document.getElementById(reqMatchId);
             
-            if (confirmPassword && newPassword === confirmPassword) {
+            if (confirmPass && newPass === confirmPass) {
                 reqMatch.classList.add('valid');
                 reqMatch.querySelector('i').className = 'fas fa-check-circle';
             } else {
@@ -3586,80 +3381,54 @@
             }
         }
 
-        // Clear password form
         function clearPasswordForm(type) {
             if (type === 'settings') {
                 document.getElementById('currentPassword').value = '';
                 document.getElementById('newPassword').value = '';
                 document.getElementById('confirmPassword').value = '';
-                
-                const reqLength = document.getElementById('req-length');
-                const reqMatch = document.getElementById('req-match');
-                reqLength.classList.remove('valid');
-                reqLength.querySelector('i').className = 'fas fa-circle';
-                reqMatch.classList.remove('valid');
-                reqMatch.querySelector('i').className = 'fas fa-circle';
+                document.getElementById('req-length').classList.remove('valid');
+                document.getElementById('req-length').querySelector('i').className = 'fas fa-circle';
+                document.getElementById('req-match').classList.remove('valid');
+                document.getElementById('req-match').querySelector('i').className = 'fas fa-circle';
             } else {
                 document.getElementById('profileCurrentPassword').value = '';
                 document.getElementById('profileNewPassword').value = '';
                 document.getElementById('profileConfirmPassword').value = '';
-                
-                const reqLength = document.getElementById('profile-req-length');
-                const reqMatch = document.getElementById('profile-req-match');
-                reqLength.classList.remove('valid');
-                reqLength.querySelector('i').className = 'fas fa-circle';
-                reqMatch.classList.remove('valid');
-                reqMatch.querySelector('i').className = 'fas fa-circle';
+                document.getElementById('profile-req-length').classList.remove('valid');
+                document.getElementById('profile-req-length').querySelector('i').className = 'fas fa-circle';
+                document.getElementById('profile-req-match').classList.remove('valid');
+                document.getElementById('profile-req-match').querySelector('i').className = 'fas fa-circle';
             }
         }
 
-        // ============ TOAST NOTIFICATION SYSTEM ============
+        // ==================== TOAST NOTIFICATIONS ====================
         function showToast(type, title, message) {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             
-            let iconClass;
-            switch(type) {
-                case 'success':
-                    iconClass = 'fa-check-circle';
-                    break;
-                case 'welcome':
-                    iconClass = 'fa-hand-sparkles';
-                    break;
-                case 'error':
-                    iconClass = 'fa-times-circle';
-                    break;
-                case 'warning':
-                    iconClass = 'fa-exclamation-triangle';
-                    break;
-                default:
-                    iconClass = 'fa-info-circle';
-            }
+            let iconClass = 'fa-info-circle';
+            if (type === 'success') iconClass = 'fa-check-circle';
+            if (type === 'welcome') iconClass = 'fa-hand-sparkles';
+            if (type === 'error') iconClass = 'fa-times-circle';
 
             toast.innerHTML = `
-                <div class="toast-icon">
-                    <i class="fas ${iconClass}"></i>
-                </div>
+                <div class="toast-icon"><i class="fas ${iconClass}"></i></div>
                 <div class="toast-content">
                     <div class="toast-title">${title}</div>
                     <div class="toast-message">${message}</div>
                 </div>
-                <button class="toast-close">
-                    <i class="fas fa-times"></i>
-                </button>
+                <button class="toast-close"><i class="fas fa-times"></i></button>
                 <div class="toast-progress"></div>
             `;
 
             toastContainer.appendChild(toast);
 
-            // Close button
             const closeBtn = toast.querySelector('.toast-close');
             closeBtn.addEventListener('click', () => {
                 toast.classList.add('hide');
                 setTimeout(() => toast.remove(), 500);
             });
 
-            // Auto remove after 5 seconds
             setTimeout(() => {
                 if (toast.parentNode) {
                     toast.classList.add('hide');
@@ -3668,51 +3437,24 @@
             }, 5000);
         }
 
-        // ============ DASHBOARD CARD INTERACTIONS ============
+        // ==================== MISC INTERACTIONS ====================
+        
+        // Dashboard Cards Ripple
         const dashboardCards = document.querySelectorAll('.dashboard-card');
         dashboardCards.forEach(card => {
             card.addEventListener('click', function() {
-                // Add ripple effect
-                const ripple = document.createElement('div');
-                ripple.style.cssText = `
-                    position: absolute;
-                    width: 100%;
-                    height: 100%;
-                    background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, transparent 70%);
-                    top: 0;
-                    left: 0;
-                    animation: ripple 0.6s ease-out;
-                    pointer-events: none;
-                `;
-                
-                this.appendChild(ripple);
-                setTimeout(() => ripple.remove(), 600);
-                
-                // Get card title for toast
                 const title = this.querySelector('.card-title').textContent;
                 showToast('success', 'Opening ' + title, 'Navigating to the selected module...');
             });
         });
 
-        // Add ripple animation
-        const rippleStyle = document.createElement('style');
-        rippleStyle.textContent = `
-            @keyframes ripple {
-                0% { transform: scale(0); opacity: 1; }
-                100% { transform: scale(2); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(rippleStyle);
-
-        // ============ SIDEBAR MENU NAVIGATION ============
+        // Sidebar Navigation
         const sidebarLinks = document.querySelectorAll('.sidebar-menu-link');
         sidebarLinks.forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
                 sidebarLinks.forEach(l => l.classList.remove('active'));
                 this.classList.add('active');
-                
-                // Close mobile sidebar
                 if (window.innerWidth <= 1200) {
                     sidebar.classList.remove('active');
                     overlay.classList.remove('active');
@@ -3720,16 +3462,13 @@
             });
         });
 
-        // ============ KEYBOARD SHORTCUTS ============
+        // Keyboard Shortcuts
         document.addEventListener('keydown', (e) => {
-            // Ctrl/Cmd + K for search focus
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
                 const searchInput = document.querySelector('.search-box input');
                 if (searchInput) searchInput.focus();
             }
-            
-            // Escape to close modals/sidebar
             if (e.key === 'Escape') {
                 sidebar.classList.remove('active');
                 overlay.classList.remove('active');
@@ -3738,82 +3477,14 @@
             }
         });
 
-        // ============ SESSION VALIDATION ============
-        async function validateSession() {
-            const sessionToken = sessionStorage.getItem('sessionToken');
-            const username = sessionStorage.getItem('username');
-            
-            if (!sessionToken || !username) {
-                return false;
-            }
-
-            try {
-                const response = await apiCall('validateSession', {
-                    sessionToken: sessionToken,
-                    username: username
-                });
-
-                return response.success && response.valid;
-            } catch (error) {
-                console.error('Session validation error:', error);
-                return false;
-            }
-        }
-
-        // ============ CHECK REMEMBERED USER ============
-        async function checkRememberedUser() {
-            const rememberedUser = localStorage.getItem('rememberedUser');
-            const sessionToken = sessionStorage.getItem('sessionToken');
-            const username = sessionStorage.getItem('username');
-            const userId = sessionStorage.getItem('userId');
-            
-            if (rememberedUser === 'true' && sessionToken && username) {
-                // Validate session
-                const isValid = await validateSession();
-                
-                if (isValid) {
-                    currentUser = {
-                        userId: userId,
-                        username: username,
-                        sessionToken: sessionToken
-                    };
-                    showDashboard();
-                    return true;
-                }
-            }
-            
-            return false;
-        }
-
-        // ============ DATE UPDATE ============
-        setInterval(updateDate, 60000);
-
-        // ============ CONNECTION STATUS ============
-        window.addEventListener('online', () => {
-            showToast('success', 'Connection Restored', 'You are back online.');
-        });
-
-        window.addEventListener('offline', () => {
-            showToast('error', 'Connection Lost', 'Please check your internet connection.');
-        });
-
-        // ============ PREVENT DOUBLE SUBMIT ============
+        // Prevent Double Submit
         let isSubmitting = false;
 
-        function preventDoubleSubmit(callback) {
-            return async function(e) {
-                if (isSubmitting) {
-                    e.preventDefault();
-                    return;
-                }
-                isSubmitting = true;
-                try {
-                    await callback(e);
-                } finally {
-                    isSubmitting = false;
-                }
-            };
-        }
+        setInterval(updateDate, 60000);
+
+        window.addEventListener('online', () => showToast('success', 'Connection Restored', 'You are back online.'));
+        window.addEventListener('offline', () => showToast('error', 'Connection Lost', 'Please check your internet connection.'));
     </script>
 </body>
+
 </html>
