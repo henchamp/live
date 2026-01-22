@@ -2375,7 +2375,7 @@
                     </div>
                     <div class="stat-card-info">
                         <!-- Dynamic ID for Total Items -->
-                        <h3 id="dashboardTotalItems">2,847</h3>
+                        <h3 id="dashboardTotalItems">0</h3>
                         <p>Items in Stock</p>
                     </div>
                     <div class="stat-card-trend down">
@@ -2402,7 +2402,6 @@
             <!-- Dashboard Cards Grid -->
             <div class="dashboard-grid">
                 <!-- Add New Item -->
-                <!-- Added ID for Modal Trigger -->
                 <div class="dashboard-card fade-in stagger-1" id="dashboardCardAddItem">
                     <div class="card-icon blue">
                         <i class="fas fa-plus-circle"></i>
@@ -2415,11 +2414,11 @@
                     <div class="card-stats">
                         <div class="stat-item">
                             <i class="fas fa-layer-group"></i>
-                            <span><span class="stat-value">15</span> categories</span>
+                            <span><span class="stat-value" id="dash-total-items">0</span> Total Items</span>
                         </div>
                         <div class="stat-item">
                             <i class="fas fa-clock"></i>
-                            <span>Last: 2h ago</span>
+                            <span id="dash-last-update">Last: --</span>
                         </div>
                     </div>
                 </div>
@@ -2481,7 +2480,7 @@
                     <div class="card-stats">
                         <div class="stat-item">
                             <i class="fas fa-cubes"></i>
-                            <span><span class="stat-value" id="dashboardGridItemsCount">2,847</span> items</span>
+                            <span><span class="stat-value" id="dashboardGridItemsCount">0</span> items</span>
                         </div>
                         <div class="stat-item">
                             <i class="fas fa-exclamation-circle"></i>
@@ -2584,12 +2583,12 @@
                             </div>
                             <div class="activity-details">
                                 <!-- Dynamic ID for Last Added Item -->
-                                <h4 id="dashboardLastItemName">LED Headlight Bulbs H7</h4>
+                                <h4 id="dashboardLastItemName">No items yet</h4>
                                 <p>New item added to inventory</p>
                             </div>
                             <div class="activity-time">
-                                <div class="activity-amount">20 units</div>
-                                <span>2 hours ago</span>
+                                <div class="activity-amount">--</div>
+                                <span>--</span>
                             </div>
                         </li>
 
@@ -2914,8 +2913,17 @@
 
     <script>
         // ==================== CONFIGURATION ====================
-        const API_URL = 'https://script.google.com/macros/s/AKfycbz5JS4XDEvddvk8C-XYyb90xET_Cuc1Bqj_S4UuKMGhjuPVjcBvfwHyBvBAvll9nFy0/exec';
         
+        // The URL for your Login/Password Management Project
+        const API_LOGIN_URL = 'https://script.google.com/macros/s/AKfycbz5JS4XDEvddvk8C-XYyb90xET_Cuc1Bqj_S4UuKMGhjuPVjcBvfwHyBvBAvll9nFy0/exec';
+        
+        // The URL for your Add Item/Inventory Project
+        // UPDATE THIS URL WITH YOUR DEPLOYED SCRIPT URL IF DIFFERENT
+        const API_INVENTORY_URL = 'https://script.google.com/macros/s/AKfycbwDr8dmZ96L4g06jIxNPoen2niPlF1bGPBBDhYkkxGX-T3C2dyWx_FeOGj8LyMgO3_2Sw/exec';
+        
+        // Actions that should go to the Inventory URL
+        const inventoryActions = ['addItem', 'getDashboardData'];
+
         // ==================== SESSION MANAGEMENT ====================
         const Session = {
             set: (key, value) => {
@@ -2952,8 +2960,15 @@
         // ==================== API SERVICE ====================
         const API = {
             async request(action, data = {}) {
+                // 1. DETERMINE WHICH URL TO USE
+                let targetUrl = API_LOGIN_URL; // Default to login URL
+                
+                if (inventoryActions.includes(action)) {
+                    targetUrl = API_INVENTORY_URL;
+                }
+
                 try {
-                    const response = await fetch(API_URL, {
+                    const response = await fetch(targetUrl, {
                         method: 'POST',
                         mode: 'cors',
                         headers: { 'Content-Type': 'text/plain' },
@@ -2986,7 +3001,8 @@
 
             async checkConnection() {
                 try {
-                    const response = await fetch(API_URL, { method: 'GET', mode: 'cors' });
+                    // Check connection on the Login URL (since it's the main entry point)
+                    const response = await fetch(API_LOGIN_URL, { method: 'GET', mode: 'cors' });
                     return response.ok;
                 } catch (error) { return false; }
             }
@@ -3219,7 +3235,7 @@
             try {
                 const data = await API.getDashboardData();
                 if (data && data.success) {
-                    // Update Total Items
+                    // Update Total Items (Stat cards)
                     if (dashboardTotalItems) dashboardTotalItems.textContent = data.totalItems.toLocaleString();
                     if (dashboardGridItemsCount) dashboardGridItemsCount.textContent = data.totalItems.toLocaleString();
 
@@ -3227,6 +3243,13 @@
                     if (dashboardLastItemName) {
                         dashboardLastItemName.textContent = data.lastAddedName || "No items yet";
                     }
+
+                    // --- NEW: Updates for the "Add New Item" Card specifically ---
+                    const dashTotal = document.getElementById('dash-total-items');
+                    if (dashTotal) dashTotal.textContent = data.totalItems.toLocaleString();
+
+                    const dashLast = document.getElementById('dash-last-update');
+                    if (dashLast) dashLast.textContent = data.lastUpdatedString || "Last: --";
                 }
             } catch (error) {
                 console.error("Failed to load dashboard data", error);
@@ -3651,5 +3674,4 @@
         window.addEventListener('offline', () => showToast('error', 'Connection Lost', 'Please check your internet connection.'));
     </script>
 </body>
-
 </html>
