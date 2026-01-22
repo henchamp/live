@@ -2246,7 +2246,8 @@
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
-                    <a href="#" class="sidebar-menu-link">
+                    <!-- Added ID for Modal Trigger -->
+                    <a href="#" class="sidebar-menu-link" id="sidebarAddItemLink">
                         <i class="fas fa-plus-circle"></i>
                         Add New Item
                     </a>
@@ -2373,7 +2374,8 @@
                         <i class="fas fa-cubes"></i>
                     </div>
                     <div class="stat-card-info">
-                        <h3>2,847</h3>
+                        <!-- Dynamic ID for Total Items -->
+                        <h3 id="dashboardTotalItems">2,847</h3>
                         <p>Items in Stock</p>
                     </div>
                     <div class="stat-card-trend down">
@@ -2400,7 +2402,8 @@
             <!-- Dashboard Cards Grid -->
             <div class="dashboard-grid">
                 <!-- Add New Item -->
-                <div class="dashboard-card fade-in stagger-1">
+                <!-- Added ID for Modal Trigger -->
+                <div class="dashboard-card fade-in stagger-1" id="dashboardCardAddItem">
                     <div class="card-icon blue">
                         <i class="fas fa-plus-circle"></i>
                     </div>
@@ -2478,7 +2481,7 @@
                     <div class="card-stats">
                         <div class="stat-item">
                             <i class="fas fa-cubes"></i>
-                            <span><span class="stat-value">2,847</span> items</span>
+                            <span><span class="stat-value" id="dashboardGridItemsCount">2,847</span> items</span>
                         </div>
                         <div class="stat-item">
                             <i class="fas fa-exclamation-circle"></i>
@@ -2580,7 +2583,8 @@
                                 <i class="fas fa-plus"></i>
                             </div>
                             <div class="activity-details">
-                                <h4>LED Headlight Bulbs H7</h4>
+                                <!-- Dynamic ID for Last Added Item -->
+                                <h4 id="dashboardLastItemName">LED Headlight Bulbs H7</h4>
                                 <p>New item added to inventory</p>
                             </div>
                             <div class="activity-time">
@@ -2739,6 +2743,53 @@
                         </button>
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Item Modal -->
+    <div class="modal-overlay" id="addItemModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Add New Item</span>
+                </div>
+                <button class="modal-close" id="closeAddItemModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addItemForm">
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-tag"></i>
+                            Item Name & Description
+                        </label>
+                        <i class="fas fa-tag input-icon"></i>
+                        <input type="text" class="form-input" id="addItemName" placeholder="e.g. Brake Pads Set - Toyota Camry" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-truck"></i>
+                            Supplier Name
+                        </label>
+                        <i class="fas fa-truck input-icon"></i>
+                        <input type="text" class="form-input" id="addItemSupplier" placeholder="e.g. AutoParts Supplier A" required>
+                    </div>
+
+                    <button type="submit" class="login-btn" id="submitAddItemBtn">
+                        <span class="btn-text">
+                            <i class="fas fa-save"></i>
+                            Add Item to Inventory
+                        </span>
+                        <div class="btn-loader">
+                            <div class="spinner"></div>
+                            <span>Adding...</span>
+                        </div>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -2925,6 +2976,14 @@
                 return await this.request('changePassword', { username, currentPassword, newPassword });
             },
 
+            async getDashboardData() {
+                return await this.request('getDashboardData');
+            },
+
+            async addItem(itemNameDesc, supplierName) {
+                return await this.request('addItem', { itemNameDesc, supplierName });
+            },
+
             async checkConnection() {
                 try {
                     const response = await fetch(API_URL, { method: 'GET', mode: 'cors' });
@@ -2952,6 +3011,21 @@
         const connectionStatus = document.getElementById('connectionStatus');
         const displayUsername = document.getElementById('displayUsername');
         
+        // Dashboard Elements
+        const dashboardTotalItems = document.getElementById('dashboardTotalItems');
+        const dashboardLastItemName = document.getElementById('dashboardLastItemName');
+        const dashboardGridItemsCount = document.getElementById('dashboardGridItemsCount');
+
+        // Add Item Modal Elements
+        const sidebarAddItemLink = document.getElementById('sidebarAddItemLink');
+        const dashboardCardAddItem = document.getElementById('dashboardCardAddItem');
+        const addItemModal = document.getElementById('addItemModal');
+        const closeAddItemModal = document.getElementById('closeAddItemModal');
+        const addItemForm = document.getElementById('addItemForm');
+        const addItemName = document.getElementById('addItemName');
+        const addItemSupplier = document.getElementById('addItemSupplier');
+        const submitAddItemBtn = document.getElementById('submitAddItemBtn');
+
         // Settings Modal Elements
         const settingsBtn = document.getElementById('settingsBtn');
         const settingsModal = document.getElementById('settingsModal');
@@ -3132,11 +3206,30 @@
             loginPage.style.display = 'none';
             dashboardPage.classList.add('active');
             updateUserDisplay();
+            loadDashboardStats();
             
             if (showWelcome) {
                 setTimeout(() => {
                     showToast('welcome', `Welcome Back, ${currentUser.username}!`, 'You have successfully logged in. Have a productive day!');
                 }, 500);
+            }
+        }
+
+        async function loadDashboardStats() {
+            try {
+                const data = await API.getDashboardData();
+                if (data && data.success) {
+                    // Update Total Items
+                    if (dashboardTotalItems) dashboardTotalItems.textContent = data.totalItems.toLocaleString();
+                    if (dashboardGridItemsCount) dashboardGridItemsCount.textContent = data.totalItems.toLocaleString();
+
+                    // Update Last Added Item Name
+                    if (dashboardLastItemName) {
+                        dashboardLastItemName.textContent = data.lastAddedName || "No items yet";
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load dashboard data", error);
             }
         }
 
@@ -3173,6 +3266,71 @@
         overlay.addEventListener('click', () => {
             sidebar.classList.remove('active');
             overlay.classList.remove('active');
+        });
+
+        // ==================== ADD ITEM LOGIC ====================
+        
+        function openAddItemModal() {
+            addItemModal.classList.add('active');
+            addItemName.value = '';
+            addItemSupplier.value = '';
+            addItemName.focus();
+        }
+
+        function closeAddItemModalFn() {
+            addItemModal.classList.remove('active');
+        }
+
+        sidebarAddItemLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            openAddItemModal();
+            // Close mobile sidebar if open
+            if(window.innerWidth <= 1200) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
+        });
+
+        dashboardCardAddItem.addEventListener('click', (e) => {
+            // Prevents navigating if it were a link, but here it's just a div
+            e.preventDefault();
+            openAddItemModal();
+        });
+
+        closeAddItemModal.addEventListener('click', closeAddItemModalFn);
+        addItemModal.addEventListener('click', (e) => {
+            if(e.target === addItemModal) closeAddItemModalFn();
+        });
+
+        addItemForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = addItemName.value.trim();
+            const supplier = addItemSupplier.value.trim();
+
+            if (!name) {
+                showToast('error', 'Validation Error', 'Item Name is required.');
+                return;
+            }
+
+            submitAddItemBtn.classList.add('loading');
+            submitAddItemBtn.disabled = true;
+
+            try {
+                const response = await API.addItem(name, supplier);
+                if (response.success) {
+                    showToast('success', 'Item Added', `Successfully added ${name} (ID: ${response.itemId}).`);
+                    closeAddItemModalFn();
+                    loadDashboardStats(); // Refresh dashboard numbers
+                } else {
+                    showToast('error', 'Error', response.message || 'Could not add item.');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('error', 'Connection Error', 'Failed to connect to the server.');
+            } finally {
+                submitAddItemBtn.classList.remove('loading');
+                submitAddItemBtn.disabled = false;
+            }
         });
 
         // ==================== SETTINGS MODAL ====================
@@ -3442,16 +3600,22 @@
         // Dashboard Cards Ripple
         const dashboardCards = document.querySelectorAll('.dashboard-card');
         dashboardCards.forEach(card => {
-            card.addEventListener('click', function() {
-                const title = this.querySelector('.card-title').textContent;
-                showToast('success', 'Opening ' + title, 'Navigating to the selected module...');
-            });
+            // We skip the one handled by specific listener
+            if (card.id !== 'dashboardCardAddItem') {
+                card.addEventListener('click', function() {
+                    const title = this.querySelector('.card-title').textContent;
+                    showToast('success', 'Opening ' + title, 'Navigating to the selected module...');
+                });
+            }
         });
 
         // Sidebar Navigation
         const sidebarLinks = document.querySelectorAll('.sidebar-menu-link');
         sidebarLinks.forEach(link => {
             link.addEventListener('click', function(e) {
+                // Skip if it's the Add Item link handled elsewhere
+                if (this.id === 'sidebarAddItemLink') return;
+
                 e.preventDefault();
                 sidebarLinks.forEach(l => l.classList.remove('active'));
                 this.classList.add('active');
@@ -3474,6 +3638,7 @@
                 overlay.classList.remove('active');
                 settingsModal.classList.remove('active');
                 profileModal.classList.remove('active');
+                addItemModal.classList.remove('active');
             }
         });
 
